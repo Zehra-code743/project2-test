@@ -1,7 +1,7 @@
 name: Weekly Brief
 
 on:
-  # TEMPORARY: runs every 5 minutes for testing (change back to weekly after test)
+  # TEMPORARY: testing every 5 minutes
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
