@@ -1,0 +1,81 @@
+name: Weekly Brief
+
+on:
+  # Runs every Monday at 9:00 AM UTC
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date for the brief (YYYY-MM-DD), defaults to today'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-quote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set date variable
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "date=${{ github.event.inputs.date }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch random quote from quotable.io
+        id: quote
+        run: |
+          # Fetch a random quote; fall back to a default if the API fails
+          response=$(curl -sf -m 10 "https://api.quotable.io/random") || true
+          if [ -n "$response" ]; then
+            quote_text=$(echo "$response" | jq -r '.content')
+            quote_author=$(echo "$response" | jq -r '.author')
+            echo "quote_text=$quote_text" >> "$GITHUB_OUTPUT"
+            echo "quote_author=$quote_author" >> "$GITHUB_OUTPUT"
+          else
+            echo "quote_text=Stay focused and keep shipping." >> "$GITHUB_OUTPUT"
+            echo "quote_author=Weekly Brief" >> "$GITHUB_OUTPUT"
+            echo "source=fallback" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Write weekly brief to file
+        run: |
+          cat > "reports/brief-${{ steps.date.outputs.date }}.txt" <<EOF
+Weekly Brief — ${{ steps.timestamp.outputs.timestamp }}
+=========================================
+
+Quote of the moment:
+  "${{ steps.quote.outputs.quote_text }}"
+    — ${{ steps.quote.outputs.quote_author }}
+
+Source: https://quotable.io
+EOF
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git add "reports/brief-${{ steps.date.outputs.date }}.txt"
+          git commit -m "Weekly brief for ${{ steps.date.outputs.date }}" || echo "No changes to commit"
+          git push
