@@ -1,9 +1,9 @@
 name: Weekly Brief
 
 on:
-  # Runs every Monday at 9:00 AM UTC
+  # TEMPORARY: runs every 5 minutes for testing (change back to weekly after test)
   schedule:
-    - cron: '0 9 * * 1'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       date:
@@ -63,7 +63,7 @@ jobs:
             echo "    — ${{ steps.quote.outputs.quote_author }}"
             echo ""
             echo "Source: https://quotable.io"
-          } > "reports/brief-${{ steps.date.outputs.date }}.txt"
+          } > "reports/brief-${{ steps.date.outputs.date }}-$(date -u +%H%M%S).txt"
 
       - name: Set up Git
         run: |
@@ -74,6 +74,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git add "reports/brief-${{ steps.date.outputs.date }}.txt"
-          git commit -m "Weekly brief for ${{ steps.date.outputs.date }}" || echo "No changes to commit"
+          git add reports/
+          git commit -m "Weekly brief - $(date -u '+%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
           git push
