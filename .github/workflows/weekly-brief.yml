@@ -38,7 +38,6 @@ jobs:
       - name: Fetch random quote from quotable.io
         id: quote
         run: |
-          # Fetch a random quote; fall back to a default if the API fails
           response=$(curl -sf -m 10 "https://api.quotable.io/random") || true
           if [ -n "$response" ]; then
             quote_text=$(echo "$response" | jq -r '.content')
@@ -48,7 +47,6 @@ jobs:
           else
             echo "quote_text=Stay focused and keep shipping." >> "$GITHUB_OUTPUT"
             echo "quote_author=Weekly Brief" >> "$GITHUB_OUTPUT"
-            echo "source=fallback" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create reports directory
@@ -56,16 +54,16 @@ jobs:
 
       - name: Write weekly brief to file
         run: |
-          cat > "reports/brief-${{ steps.date.outputs.date }}.txt" <<EOF
-Weekly Brief — ${{ steps.timestamp.outputs.timestamp }}
-=========================================
-
-Quote of the moment:
-  "${{ steps.quote.outputs.quote_text }}"
-    — ${{ steps.quote.outputs.quote_author }}
-
-Source: https://quotable.io
-EOF
+          {
+            echo "Weekly Brief — ${{ steps.timestamp.outputs.timestamp }}"
+            echo "========================================="
+            echo ""
+            echo "Quote of the moment:"
+            echo "  \"${{ steps.quote.outputs.quote_text }}\""
+            echo "    — ${{ steps.quote.outputs.quote_author }}"
+            echo ""
+            echo "Source: https://quotable.io"
+          } > "reports/brief-${{ steps.date.outputs.date }}.txt"
 
       - name: Set up Git
         run: |
